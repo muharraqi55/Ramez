@@ -11,6 +11,8 @@
     --text: #111827;
     --muted: #6b7280;
     --accent: #2563eb;
+    --vw: 100vw;
+    --vh: 100vh;
   }
   :root[data-theme="dark"] {
     --bg: #0f172a;
@@ -34,23 +36,18 @@
     padding: 12px;
     background: var(--bg);
   }
-  /* التدوير الاحتياطي: يعمل فقط والشاشة عمودية.
-     عندما تصبح الشاشة أفقية يختفي التدوير تلقائيًا */
-  @media (orientation: portrait) {
-    #app.rot {
-      position: fixed;
-      top: 0;
-      left: 100vw;
-      width: 100vh;
-      height: 100vw;
-      width: 100dvh;
-      height: 100dvw;
-      min-height: 0;
-      transform-origin: top left;
-      transform: rotate(90deg);
-      overflow: auto;
-      z-index: 9999;
-    }
+  /* التدوير الاحتياطي: المقاسات تُحسب من JavaScript */
+  #app.rot {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: var(--vh);
+    height: var(--vw);
+    min-height: 0;
+    transform-origin: top left;
+    transform: translateX(var(--vw)) rotate(90deg);
+    overflow: auto;
+    z-index: 9999;
   }
 
   .header {
@@ -260,20 +257,32 @@
   };
 
   // ===== تدوير الشاشة =====
-  let rotated = false;
-  let usedLock = false;
+  let rotated = false;        // المستخدم ضغط زر التدوير
+  let usedLock = false;       // نجح قفل الاتجاه الحقيقي
+  let originalOrientation = "portrait";
+
+  // يحسب مقاس الشاشة الحقيقي ويطبق/يزيل التدوير بالـ CSS
+  function sync() {
+    const vv = window.visualViewport;
+    const w = Math.round(vv ? vv.width : window.innerWidth);
+    const h = Math.round(vv ? vv.height : window.innerHeight);
+    const root = document.documentElement.style;
+    root.setProperty("--vw", w + "px");
+    root.setProperty("--vh", h + "px");
+    const portrait = h >= w;
+    // التدوير بالـ CSS فقط إذا: المستخدم طلبه + لم ينجح القفل + الشاشة عمودية
+    appEl.classList.toggle("rot", rotated && !usedLock && portrait);
+  }
 
   function updateRotateBtn() {
     rotateBtn.textContent = rotated ? "↩️ إرجاع الشاشة" : "🔄 تدوير الشاشة";
   }
 
   async function enterRotated() {
+    originalOrientation = window.innerHeight >= window.innerWidth ? "portrait" : "landscape";
+    const target = originalOrientation === "portrait" ? "landscape" : "portrait";
     rotated = true;
     usedLock = false;
-    const isPortrait = window.matchMedia("(orientation: portrait)").matches;
-    const target = isPortrait ? "landscape" : "portrait";
-
-    // المحاولة 1: قفل حقيقي (أندرويد/Chrome)
     try {
       if (!document.fullscreenElement) {
         await document.documentElement.requestFullscreen();
@@ -284,23 +293,31 @@
       if (document.fullscreenElement) {
         try { await document.exitFullscreen(); } catch (_) {}
       }
-      // المحاولة 2: تدوير بالـ CSS (يعمل فقط والشاشة عمودية)
-      appEl.classList.add("rot");
+      usedLock = false;
     }
     updateRotateBtn();
+    sync();
   }
 
   async function exitRotated() {
+    const hadLock = usedLock;
     rotated = false;
-    appEl.classList.remove("rot");
-    if (usedLock) {
-      try { screen.orientation.unlock(); } catch (_) {}
-    }
     usedLock = false;
+    sync(); // يزيل تدوير الـ CSS فورًا
+    updateRotateBtn();
+
+    if (hadLock) {
+      try {
+        await screen.orientation.lock(originalOrientation);
+      } catch (_) {}
+      setTimeout(() => {
+        try { screen.orientation.unlock(); } catch (_) {}
+      }, 500);
+    }
     if (document.fullscreenElement) {
       try { await document.exitFullscreen(); } catch (_) {}
     }
-    updateRotateBtn();
+    setTimeout(sync, 600);
   }
 
   rotateBtn.onclick = () => {
@@ -315,9 +332,15 @@
       usedLock = false;
       try { screen.orientation.unlock(); } catch (_) {}
       updateRotateBtn();
+      sync();
     }
   });
 
+  window.addEventListener("resize", sync);
+  window.addEventListener("orientationchange", () => setTimeout(sync, 200));
+  if (window.visualViewport) window.visualViewport.addEventListener("resize", sync);
+
+  sync();
   const start = parseInt(location.hash.slice(1), 10);
   show(isNaN(start) ? 0 : start - 1);
 </script>
