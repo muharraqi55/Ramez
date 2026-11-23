@@ -31,24 +31,25 @@
     background: var(--bg);
     color: var(--text);
     font-family: "Segoe UI", Tahoma, Arial, sans-serif;
-    padding: 16px;
+    padding: 12px;
   }
   .card {
     width: 100%;
-    max-width: 420px;
+    max-width: 900px;
     background: var(--card);
     border-radius: 20px;
-    padding: 24px;
+    padding: 16px;
     text-align: center;
     box-shadow: 0 10px 30px rgba(0,0,0,.12);
   }
+  /* الصورة بحجمها الأصلي ونسبتها بدون قص */
   .photo {
+    display: block;
     width: 100%;
-    aspect-ratio: 1 / 1;
-    object-fit: cover;
-    border-radius: 16px;
-    background: #cbd5e1;
-    margin-bottom: 18px;
+    height: auto;
+    border-radius: 12px;
+    background: #ffffff;
+    margin-bottom: 16px;
   }
   .name { font-size: 26px; font-weight: 700; margin: 0 0 8px; }
   .phone {
@@ -65,7 +66,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    margin-top: 22px;
+    margin-top: 18px;
   }
   .nav button {
     flex: 1;
@@ -105,9 +106,9 @@
   ];
 
   const PLACEHOLDER = "data:image/svg+xml;utf8," + encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400">' +
-    '<rect width="400" height="400" fill="#cbd5e1"/>' +
-    '<text x="200" y="210" font-size="22" text-anchor="middle" fill="#64748b" font-family="Arial">No Image</text>' +
+    '<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="285">' +
+    '<rect width="1000" height="285" fill="#e2e8f0"/>' +
+    '<text x="500" y="150" font-size="28" text-anchor="middle" fill="#64748b" font-family="Arial">No Image</text>' +
     '</svg>'
   );
 
