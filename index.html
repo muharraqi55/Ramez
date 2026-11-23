@@ -34,18 +34,23 @@
     padding: 12px;
     background: var(--bg);
   }
-  /* وضع التدوير الاحتياطي (عندما يمنع المتصفح قفل الاتجاه) */
-  #app.rot {
-    position: fixed;
-    top: 0;
-    left: 100vw;
-    width: 100vh;
-    height: 100vw;
-    min-height: 0;
-    transform-origin: top left;
-    transform: rotate(90deg);
-    overflow: auto;
-    z-index: 9999;
+  /* التدوير الاحتياطي: يعمل فقط والشاشة عمودية.
+     عندما تصبح الشاشة أفقية يختفي التدوير تلقائيًا */
+  @media (orientation: portrait) {
+    #app.rot {
+      position: fixed;
+      top: 0;
+      left: 100vw;
+      width: 100vh;
+      height: 100vw;
+      width: 100dvh;
+      height: 100dvw;
+      min-height: 0;
+      transform-origin: top left;
+      transform: rotate(90deg);
+      overflow: auto;
+      z-index: 9999;
+    }
   }
 
   .header {
@@ -159,7 +164,6 @@
 
 <script>
   // ===== الأشخاص (6 صفحات) =====
-  // photo بدون امتداد = يجرب jpg و png تلقائيًا، أو اكتب الامتداد كاملًا
   const people = [
     { name: "محمد",   phone: "33008860", photo: "images/1", note: "" },
     { name: "الاسم 2", phone: "00000000", photo: "images/2", note: "" },
@@ -256,32 +260,32 @@
   };
 
   // ===== تدوير الشاشة =====
-  // الزر يحفظ حالته بنفسه: عادي <-> مدوَّر
-  let rotated = false;          // هل نحن في وضع التدوير الآن؟
-  let usedCssFallback = false;  // هل استخدمنا التدوير بالـ CSS؟
-  let originalOrientation = "portrait";
+  let rotated = false;
+  let usedLock = false;
+
+  function updateRotateBtn() {
+    rotateBtn.textContent = rotated ? "↩️ إرجاع الشاشة" : "🔄 تدوير الشاشة";
+  }
 
   async function enterRotated() {
-    originalOrientation = window.matchMedia("(orientation: portrait)").matches ? "portrait" : "landscape";
-    const target = originalOrientation === "portrait" ? "landscape" : "portrait";
     rotated = true;
-    usedCssFallback = false;
+    usedLock = false;
+    const isPortrait = window.matchMedia("(orientation: portrait)").matches;
+    const target = isPortrait ? "landscape" : "portrait";
+
+    // المحاولة 1: قفل حقيقي (أندرويد/Chrome)
     try {
       if (!document.fullscreenElement) {
         await document.documentElement.requestFullscreen();
       }
       await screen.orientation.lock(target);
+      usedLock = true;
     } catch (e) {
-      // المتصفح رفض القفل (مثل iPhone): ندوّر الصفحة بالـ CSS
       if (document.fullscreenElement) {
         try { await document.exitFullscreen(); } catch (_) {}
       }
-      if (originalOrientation === "portrait") {
-        usedCssFallback = true;
-        appEl.classList.add("rot");
-      } else {
-        rotated = false;
-      }
+      // المحاولة 2: تدوير بالـ CSS (يعمل فقط والشاشة عمودية)
+      appEl.classList.add("rot");
     }
     updateRotateBtn();
   }
@@ -289,26 +293,14 @@
   async function exitRotated() {
     rotated = false;
     appEl.classList.remove("rot");
-    try {
-      if (screen.orientation && screen.orientation.lock && !usedCssFallback) {
-        // نرجع للاتجاه الأصلي ثم نحرر القفل
-        await screen.orientation.lock(originalOrientation);
-        setTimeout(() => {
-          try { screen.orientation.unlock(); } catch (_) {}
-        }, 400);
-      }
-    } catch (e) {
+    if (usedLock) {
       try { screen.orientation.unlock(); } catch (_) {}
     }
-    usedCssFallback = false;
+    usedLock = false;
     if (document.fullscreenElement) {
       try { await document.exitFullscreen(); } catch (_) {}
     }
     updateRotateBtn();
-  }
-
-  function updateRotateBtn() {
-    rotateBtn.textContent = rotated ? "↩️ إرجاع الشاشة" : "🔄 تدوير الشاشة";
   }
 
   rotateBtn.onclick = () => {
@@ -316,10 +308,11 @@
     else enterRotated();
   };
 
-  // إذا خرج المستخدم من ملء الشاشة بنفسه (زر الرجوع) نصفّر الحالة
+  // إذا خرج المستخدم من ملء الشاشة بنفسه
   document.addEventListener("fullscreenchange", () => {
-    if (!document.fullscreenElement && rotated && !usedCssFallback) {
+    if (!document.fullscreenElement && rotated && usedLock) {
       rotated = false;
+      usedLock = false;
       try { screen.orientation.unlock(); } catch (_) {}
       updateRotateBtn();
     }
