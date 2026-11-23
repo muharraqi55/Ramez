@@ -29,6 +29,7 @@
     transition: background .25s, color .25s;
   }
   #app {
+    position: relative;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
@@ -36,7 +37,6 @@
     padding: 12px;
     background: var(--bg);
   }
-  /* التدوير الاحتياطي: المقاسات تُحسب من JavaScript */
   #app.rot {
     position: fixed;
     top: 0;
@@ -49,6 +49,28 @@
     overflow: auto;
     z-index: 9999;
   }
+
+  /* زر المشاركة في الزاوية */
+  .share-corner {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    width: 46px;
+    height: 46px;
+    border: none;
+    border-radius: 50%;
+    background: var(--accent);
+    color: #fff;
+    font-size: 21px;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(0,0,0,.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 5;
+    transition: transform .15s;
+  }
+  .share-corner:active { transform: scale(.9); }
 
   .header {
     width: 100%;
@@ -65,12 +87,7 @@
     padding: 6px 20px;
     box-shadow: 0 6px 20px rgba(0,0,0,.10);
   }
-  .logo {
-    display: block;
-    height: 90px;
-    width: auto;
-    max-width: 100%;
-  }
+  .logo { display: block; height: 90px; width: auto; max-width: 100%; }
   .tools { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
   .tools button {
     padding: 9px 16px;
@@ -129,17 +146,113 @@
   }
   .nav button:disabled { opacity: .35; cursor: default; }
   .counter { color: var(--muted); font-size: 14px; min-width: 60px; }
+
+  /* رسالة صغيرة (Toast) */
+  #toast {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%) translateY(20px);
+    background: #111827;
+    color: #fff;
+    padding: 11px 20px;
+    border-radius: 999px;
+    font-size: 15px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity .25s, transform .25s;
+    z-index: 100000;
+    box-shadow: 0 6px 20px rgba(0,0,0,.3);
+  }
+  #toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  /* ===== ورقة الطباعة (مخفية على الشاشة) ===== */
+  #printSheet { display: none; }
+
+  @page { size: A4 portrait; margin: 10mm; }
+
+  @media print {
+    html, body { background: #fff !important; }
+    #app, #toast { display: none !important; }
+    #printSheet {
+      display: block;
+      color: #111;
+      font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+      -webkit-print-color-adjust: exact;
+      print-color-adjust: exact;
+    }
+    .ps-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10mm;
+      padding-bottom: 4mm;
+      margin-bottom: 6mm;
+      border-bottom: 1.2mm solid #ed2429;
+    }
+    .ps-head img { height: 18mm; width: auto; display: block; }
+    .ps-title { text-align: left; direction: rtl; }
+    .ps-title h1 { margin: 0; font-size: 20pt; }
+    .ps-title p { margin: 1mm 0 0; font-size: 10pt; color: #555; }
+    .ps-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6mm;
+    }
+    .ps-card {
+      border: .4mm solid #d1d5db;
+      border-top: 1.2mm solid #1fb25a;
+      border-radius: 4mm;
+      padding: 3mm;
+      text-align: center;
+      break-inside: avoid;
+      page-break-inside: avoid;
+      background: #fff;
+    }
+    .ps-card img {
+      display: block;
+      width: 100%;
+      height: auto;
+      border-radius: 2mm;
+      margin-bottom: 2.5mm;
+    }
+    .ps-num {
+      display: inline-block;
+      min-width: 6mm;
+      padding: .5mm 2mm;
+      margin-bottom: 1.5mm;
+      border-radius: 99px;
+      background: #ed2429;
+      color: #fff;
+      font-size: 9pt;
+      font-weight: 700;
+    }
+    .ps-name { font-size: 15pt; font-weight: 700; margin: 0 0 1mm; }
+    .ps-phone { font-size: 14pt; direction: ltr; color: #1d4ed8; font-weight: 600; }
+    .ps-note { font-size: 9.5pt; color: #555; margin-top: 1mm; }
+    .ps-foot {
+      margin-top: 6mm;
+      padding-top: 2mm;
+      border-top: .3mm solid #d1d5db;
+      text-align: center;
+      font-size: 9pt;
+      color: #777;
+    }
+  }
 </style>
 </head>
 <body>
 
 <div id="app">
+  <button id="shareBtn" class="share-corner" title="مشاركة الموقع" aria-label="مشاركة الموقع">📤</button>
+
   <div class="header">
     <div class="logo-box">
       <img class="logo" src="logo.png" alt="Ramez">
     </div>
     <div class="tools">
       <button id="homeBtn">🏠 الرئيسية</button>
+      <button id="printBtn">🖨️ طباعة الكل</button>
       <button id="themeBtn">🌙 ليلي</button>
       <button id="rotateBtn">🔄 تدوير الشاشة</button>
     </div>
@@ -158,6 +271,9 @@
     </div>
   </div>
 </div>
+
+<div id="toast"></div>
+<div id="printSheet"></div>
 
 <script>
   // ===== الأشخاص (6 صفحات) =====
@@ -187,33 +303,40 @@
   const prevBtn = document.getElementById("prev");
   const nextBtn = document.getElementById("next");
   const homeBtn = document.getElementById("homeBtn");
+  const printBtn = document.getElementById("printBtn");
+  const shareBtn = document.getElementById("shareBtn");
   const themeBtn = document.getElementById("themeBtn");
   const rotateBtn = document.getElementById("rotateBtn");
   const appEl = document.getElementById("app");
+  const toastEl = document.getElementById("toast");
+  const printSheet = document.getElementById("printSheet");
 
   let index = 0;
 
-  function loadPhoto(path) {
+  // يحمّل الصورة داخل أي عنصر img مع تجربة الامتدادات
+  function loadPhotoInto(img, path, done) {
     const hasExt = /\.(jpe?g|png|webp|gif)$/i.test(path);
     const candidates = hasExt ? [path] : EXTENSIONS.map(ext => path + ext);
     let n = 0;
-    photoEl.onerror = () => {
+    img.onload = () => { if (done) done(); };
+    img.onerror = () => {
       n++;
       if (n < candidates.length) {
-        photoEl.src = candidates[n];
+        img.src = candidates[n];
       } else {
-        photoEl.onerror = null;
-        photoEl.src = PLACEHOLDER;
+        img.onerror = null;
+        img.onload = () => { if (done) done(); };
+        img.src = PLACEHOLDER;
       }
     };
-    photoEl.src = candidates[0];
+    img.src = candidates[0];
   }
 
   function show(i) {
     index = Math.max(0, Math.min(people.length - 1, i));
     const p = people[index];
 
-    loadPhoto(p.photo);
+    loadPhotoInto(photoEl, p.photo);
     photoEl.alt = p.name;
     nameEl.textContent = p.name;
     phoneEl.textContent = p.phone;
@@ -237,6 +360,112 @@
     if (e.key === "Home") show(0);
   });
 
+  // ===== رسالة صغيرة =====
+  let toastTimer;
+  function toast(msg) {
+    toastEl.textContent = msg;
+    toastEl.classList.add("show");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove("show"), 2200);
+  }
+
+  // ===== مشاركة الموقع =====
+  shareBtn.onclick = async () => {
+    const url = location.href.split("#")[0];
+    const data = { title: document.title, text: "تفضل دليل الأرقام", url: url };
+    try {
+      if (navigator.share) {
+        await navigator.share(data);
+        return;
+      }
+    } catch (e) {
+      if (e && e.name === "AbortError") return; // المستخدم أغلق نافذة المشاركة
+    }
+    try {
+      await navigator.clipboard.writeText(url);
+      toast("✅ تم نسخ رابط الموقع");
+    } catch (e) {
+      window.prompt("انسخ الرابط:", url);
+    }
+  };
+
+  // ===== طباعة الجميع في صفحة واحدة =====
+  function buildPrintSheet() {
+    printSheet.innerHTML = "";
+
+    const head = document.createElement("div");
+    head.className = "ps-head";
+    const logo = document.createElement("img");
+    logo.src = "logo.png";
+    logo.alt = "Ramez";
+    const title = document.createElement("div");
+    title.className = "ps-title";
+    const dateStr = new Date().toLocaleDateString("ar-BH-u-nu-latn", {
+      year: "numeric", month: "long", day: "numeric"
+    });
+    title.innerHTML = "<h1>دليل الأرقام</h1><p>" + dateStr + "</p>";
+    head.appendChild(logo);
+    head.appendChild(title);
+    printSheet.appendChild(head);
+
+    const grid = document.createElement("div");
+    grid.className = "ps-grid";
+    const loads = [];
+
+    people.forEach((p, i) => {
+      const card = document.createElement("div");
+      card.className = "ps-card";
+
+      const num = document.createElement("div");
+      num.className = "ps-num";
+      num.textContent = i + 1;
+
+      const img = document.createElement("img");
+      img.alt = p.name;
+      loads.push(new Promise(res => loadPhotoInto(img, p.photo, res)));
+
+      const nm = document.createElement("div");
+      nm.className = "ps-name";
+      nm.textContent = p.name;
+
+      const ph = document.createElement("div");
+      ph.className = "ps-phone";
+      ph.textContent = p.phone;
+
+      card.appendChild(num);
+      card.appendChild(img);
+      card.appendChild(nm);
+      card.appendChild(ph);
+
+      if (p.note) {
+        const nt = document.createElement("div");
+        nt.className = "ps-note";
+        nt.textContent = p.note;
+        card.appendChild(nt);
+      }
+      grid.appendChild(card);
+    });
+    printSheet.appendChild(grid);
+
+    const foot = document.createElement("div");
+    foot.className = "ps-foot";
+    foot.textContent = "عدد الأشخاص: " + people.length;
+    printSheet.appendChild(foot);
+
+    loads.push(new Promise(res => {
+      if (logo.complete) res();
+      else { logo.onload = res; logo.onerror = res; }
+    }));
+
+    return Promise.all(loads);
+  }
+
+  printBtn.onclick = async () => {
+    toast("⏳ جاري تجهيز الطباعة...");
+    await buildPrintSheet();
+    setTimeout(() => window.print(), 150);
+  };
+
   // ===== الثيم ليلي / نهاري =====
   function applyTheme(t) {
     document.documentElement.setAttribute("data-theme", t);
@@ -257,11 +486,10 @@
   };
 
   // ===== تدوير الشاشة =====
-  let rotated = false;        // المستخدم ضغط زر التدوير
-  let usedLock = false;       // نجح قفل الاتجاه الحقيقي
+  let rotated = false;
+  let usedLock = false;
   let originalOrientation = "portrait";
 
-  // يحسب مقاس الشاشة الحقيقي ويطبق/يزيل التدوير بالـ CSS
   function sync() {
     const vv = window.visualViewport;
     const w = Math.round(vv ? vv.width : window.innerWidth);
@@ -270,7 +498,6 @@
     root.setProperty("--vw", w + "px");
     root.setProperty("--vh", h + "px");
     const portrait = h >= w;
-    // التدوير بالـ CSS فقط إذا: المستخدم طلبه + لم ينجح القفل + الشاشة عمودية
     appEl.classList.toggle("rot", rotated && !usedLock && portrait);
   }
 
@@ -303,13 +530,11 @@
     const hadLock = usedLock;
     rotated = false;
     usedLock = false;
-    sync(); // يزيل تدوير الـ CSS فورًا
+    sync();
     updateRotateBtn();
 
     if (hadLock) {
-      try {
-        await screen.orientation.lock(originalOrientation);
-      } catch (_) {}
+      try { await screen.orientation.lock(originalOrientation); } catch (_) {}
       setTimeout(() => {
         try { screen.orientation.unlock(); } catch (_) {}
       }, 500);
@@ -325,7 +550,6 @@
     else enterRotated();
   };
 
-  // إذا خرج المستخدم من ملء الشاشة بنفسه
   document.addEventListener("fullscreenchange", () => {
     if (!document.fullscreenElement && rotated && usedLock) {
       rotated = false;
