@@ -50,28 +50,6 @@
     z-index: 9999;
   }
 
-  /* زر المشاركة في الزاوية */
-  .share-corner {
-    position: absolute;
-    top: 12px;
-    left: 12px;
-    width: 46px;
-    height: 46px;
-    border: none;
-    border-radius: 50%;
-    background: var(--accent);
-    color: #fff;
-    font-size: 21px;
-    cursor: pointer;
-    box-shadow: 0 4px 14px rgba(0,0,0,.25);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 5;
-    transition: transform .15s;
-  }
-  .share-corner:active { transform: scale(.9); }
-
   .header {
     width: 100%;
     max-width: 900px;
@@ -146,6 +124,37 @@
   }
   .nav button:disabled { opacity: .35; cursor: default; }
   .counter { color: var(--muted); font-size: 14px; min-width: 60px; }
+
+  /* ===== الشريط السفلي: مشاركة + طباعة ===== */
+  .dock {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    gap: 12px;
+    margin-top: 16px;
+    padding-bottom: 8px;
+  }
+  .dock button {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 14px 12px;
+    font-size: 16px;
+    font-weight: 600;
+    border: none;
+    border-radius: 16px;
+    color: #fff;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(0,0,0,.22);
+    transition: transform .15s, filter .15s;
+  }
+  .dock button:active { transform: scale(.96); }
+  .dock button:hover { filter: brightness(1.08); }
+  .dock svg { width: 22px; height: 22px; flex: none; }
+  .dock .share { background: linear-gradient(135deg, #8b5cf6, #2563eb); }
+  .dock .print { background: linear-gradient(135deg, #ed2429, #f97316); }
 
   /* رسالة صغيرة (Toast) */
   #toast {
@@ -244,15 +253,12 @@
 <body>
 
 <div id="app">
-  <button id="shareBtn" class="share-corner" title="مشاركة الموقع" aria-label="مشاركة الموقع">📤</button>
-
   <div class="header">
     <div class="logo-box">
       <img class="logo" src="logo.png" alt="Ramez">
     </div>
     <div class="tools">
       <button id="homeBtn">🏠 الرئيسية</button>
-      <button id="printBtn">🖨️ طباعة الكل</button>
       <button id="themeBtn">🌙 ليلي</button>
       <button id="rotateBtn">🔄 تدوير الشاشة</button>
     </div>
@@ -269,6 +275,27 @@
       <span id="counter" class="counter"></span>
       <button id="next">التالي</button>
     </div>
+  </div>
+
+  <div class="dock">
+    <button id="shareBtn" class="share" aria-label="مشاركة الموقع">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="18" cy="5" r="3"/>
+        <circle cx="6" cy="12" r="3"/>
+        <circle cx="18" cy="19" r="3"/>
+        <line x1="8.6" y1="13.5" x2="15.4" y2="17.5"/>
+        <line x1="15.4" y1="6.5" x2="8.6" y2="10.5"/>
+      </svg>
+      <span>مشاركة الموقع</span>
+    </button>
+    <button id="printBtn" class="print" aria-label="طباعة الكل">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <polyline points="6 9 6 2 18 2 18 9"/>
+        <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/>
+        <rect x="6" y="14" width="12" height="8"/>
+      </svg>
+      <span>طباعة الكل</span>
+    </button>
   </div>
 </div>
 
@@ -313,7 +340,6 @@
 
   let index = 0;
 
-  // يحمّل الصورة داخل أي عنصر img مع تجربة الامتدادات
   function loadPhotoInto(img, path, done) {
     const hasExt = /\.(jpe?g|png|webp|gif)$/i.test(path);
     const candidates = hasExt ? [path] : EXTENSIONS.map(ext => path + ext);
@@ -379,7 +405,7 @@
         return;
       }
     } catch (e) {
-      if (e && e.name === "AbortError") return; // المستخدم أغلق نافذة المشاركة
+      if (e && e.name === "AbortError") return;
     }
     try {
       await navigator.clipboard.writeText(url);
