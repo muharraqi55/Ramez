@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>الدليل</title>
+<style>
+  :root {
+    --bg: #f3f4f6;
+    --card: #ffffff;
+    --text: #111827;
+    --muted: #6b7280;
+    --accent: #2563eb;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0f172a;
+      --card: #1e293b;
+      --text: #f1f5f9;
+      --muted: #94a3b8;
+      --accent: #3b82f6;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Segoe UI", Tahoma, Arial, sans-serif;
+    padding: 16px;
+  }
+  .card {
+    width: 100%;
+    max-width: 420px;
+    background: var(--card);
+    border-radius: 20px;
+    padding: 24px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,.12);
+  }
+  .photo {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: 16px;
+    background: #cbd5e1;
+    margin-bottom: 18px;
+  }
+  .name { font-size: 26px; font-weight: 700; margin: 0 0 8px; }
+  .phone {
+    display: inline-block;
+    font-size: 22px;
+    color: var(--accent);
+    text-decoration: none;
+    direction: ltr;
+    margin-bottom: 4px;
+  }
+  .note { color: var(--muted); margin: 6px 0 0; font-size: 15px; }
+  .nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-top: 22px;
+  }
+  .nav button {
+    flex: 1;
+    padding: 12px;
+    font-size: 16px;
+    border: none;
+    border-radius: 12px;
+    background: var(--accent);
+    color: #fff;
+    cursor: pointer;
+  }
+  .nav button:disabled { opacity: .35; cursor: default; }
+  .counter { color: var(--muted); font-size: 14px; min-width: 60px; }
+</style>
+</head>
+<body>
+
+<div class="card">
+  <img id="photo" class="photo" alt="">
+  <h1 id="name" class="name"></h1>
+  <a id="phone" class="phone" href="#"></a>
+  <p id="note" class="note"></p>
+
+  <div class="nav">
+    <button id="prev">السابق</button>
+    <span id="counter" class="counter"></span>
+    <button id="next">التالي</button>
+  </div>
+</div>
+
+<script>
+  // أضف أو عدّل الأشخاص هنا. كل سطر { } = صفحة جديدة.
+  const people = [
+    { name: "محمد",  phone: "33008860", photo: "images/1.jpg", note: "" },
+    { name: "الاسم الثاني", phone: "00000000", photo: "images/2.jpg", note: "" },
+    { name: "الاسم الثالث", phone: "00000000", photo: "images/3.jpg", note: "" }
+  ];
+
+  const PLACEHOLDER = "data:image/svg+xml;utf8," + encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" width="400" height="400">' +
+    '<rect width="400" height="400" fill="#cbd5e1"/>' +
+    '<text x="200" y="210" font-size="22" text-anchor="middle" fill="#64748b" font-family="Arial">No Image</text>' +
+    '</svg>'
+  );
+
+  const photoEl = document.getElementById("photo");
+  const nameEl = document.getElementById("name");
+  const phoneEl = document.getElementById("phone");
+  const noteEl = document.getElementById("note");
+  const counterEl = document.getElementById("counter");
+  const prevBtn = document.getElementById("prev");
+  const nextBtn = document.getElementById("next");
+
+  let index = 0;
+
+  function show(i) {
+    index = Math.max(0, Math.min(people.length - 1, i));
+    const p = people[index];
+
+    photoEl.onerror = () => { photoEl.onerror = null; photoEl.src = PLACEHOLDER; };
+    photoEl.src = p.photo;
+    photoEl.alt = p.name;
+    nameEl.textContent = p.name;
+    phoneEl.textContent = p.phone;
+    phoneEl.href = "tel:" + p.phone;
+    noteEl.textContent = p.note || "";
+    noteEl.style.display = p.note ? "block" : "none";
+    counterEl.textContent = (index + 1) + " / " + people.length;
+    prevBtn.disabled = index === 0;
+    nextBtn.disabled = index === people.length - 1;
+
+    history.replaceState(null, "", "#" + (index + 1));
+  }
+
+  prevBtn.onclick = () => show(index - 1);
+  nextBtn.onclick = () => show(index + 1);
+
+  document.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowLeft") show(index + 1);
+    if (e.key === "ArrowRight") show(index - 1);
+  });
+
+  const start = parseInt(location.hash.slice(1), 10);
+  show(isNaN(start) ? 0 : start - 1);
+</script>
+</body>
+</html>
