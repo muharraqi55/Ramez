@@ -12,27 +12,75 @@
     --muted: #6b7280;
     --accent: #2563eb;
   }
-  @media (prefers-color-scheme: dark) {
-    :root {
-      --bg: #0f172a;
-      --card: #1e293b;
-      --text: #f1f5f9;
-      --muted: #94a3b8;
-      --accent: #3b82f6;
-    }
+  :root[data-theme="dark"] {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --text: #f1f5f9;
+    --muted: #94a3b8;
+    --accent: #3b82f6;
   }
   * { box-sizing: border-box; }
+  html, body { margin: 0; background: var(--bg); }
   body {
-    margin: 0;
-    min-height: 100vh;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--bg);
     color: var(--text);
     font-family: "Segoe UI", Tahoma, Arial, sans-serif;
-    padding: 12px;
+    transition: background .25s, color .25s;
   }
+  #app {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px;
+    background: var(--bg);
+  }
+  /* وضع التدوير الاحتياطي (عندما يمنع المتصفح قفل الاتجاه) */
+  #app.rot {
+    position: fixed;
+    top: 0;
+    left: 100vw;
+    width: 100vh;
+    height: 100vw;
+    min-height: 0;
+    transform-origin: top left;
+    transform: rotate(90deg);
+    overflow: auto;
+    z-index: 9999;
+  }
+
+  .header {
+    width: 100%;
+    max-width: 900px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+  .logo-box {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 6px 20px;
+    box-shadow: 0 6px 20px rgba(0,0,0,.10);
+  }
+  .logo {
+    display: block;
+    height: 90px;
+    width: auto;
+    max-width: 100%;
+  }
+  .tools { display: flex; gap: 10px; }
+  .tools button {
+    padding: 9px 16px;
+    font-size: 15px;
+    border: none;
+    border-radius: 999px;
+    background: var(--card);
+    color: var(--text);
+    cursor: pointer;
+    box-shadow: 0 3px 10px rgba(0,0,0,.12);
+  }
+
   .card {
     width: 100%;
     max-width: 900px;
@@ -83,27 +131,41 @@
 </head>
 <body>
 
-<div class="card">
-  <img id="photo" class="photo" alt="">
-  <h1 id="name" class="name"></h1>
-  <a id="phone" class="phone" href="#"></a>
-  <p id="note" class="note"></p>
+<div id="app">
+  <div class="header">
+    <div class="logo-box">
+      <img class="logo" src="logo.png" alt="Ramez">
+    </div>
+    <div class="tools">
+      <button id="themeBtn">🌙 ليلي</button>
+      <button id="rotateBtn">🔄 تدوير الشاشة</button>
+    </div>
+  </div>
 
-  <div class="nav">
-    <button id="prev">السابق</button>
-    <span id="counter" class="counter"></span>
-    <button id="next">التالي</button>
+  <div class="card">
+    <img id="photo" class="photo" alt="">
+    <h1 id="name" class="name"></h1>
+    <a id="phone" class="phone" href="#"></a>
+    <p id="note" class="note"></p>
+
+    <div class="nav">
+      <button id="prev">السابق</button>
+      <span id="counter" class="counter"></span>
+      <button id="next">التالي</button>
+    </div>
   </div>
 </div>
 
 <script>
-  // أضف أو عدّل الأشخاص هنا. كل سطر { } = صفحة جديدة.
-  // photo: بدون امتداد (images/1) = يجرب jpg و png تلقائيًا
-  //        أو مع امتداد (images/1.png) = يستخدمه كما هو
+  // ===== الأشخاص (6 صفحات) =====
+  // photo بدون امتداد = يجرب jpg و png تلقائيًا، أو اكتب الامتداد كاملًا
   const people = [
-    { name: "محمد",  phone: "33008860", photo: "images/1", note: "" },
-    { name: "الاسم الثاني", phone: "00000000", photo: "images/2", note: "" },
-    { name: "الاسم الثالث", phone: "00000000", photo: "images/3.png", note: "" }
+    { name: "محمد",   phone: "33008860", photo: "images/1", note: "" },
+    { name: "الاسم 2", phone: "00000000", photo: "images/2", note: "" },
+    { name: "الاسم 3", phone: "00000000", photo: "images/3", note: "" },
+    { name: "الاسم 4", phone: "00000000", photo: "images/4", note: "" },
+    { name: "الاسم 5", phone: "00000000", photo: "images/5", note: "" },
+    { name: "الاسم 6", phone: "00000000", photo: "images/6", note: "" }
   ];
 
   const EXTENSIONS = [".jpg", ".png", ".jpeg", ".webp"];
@@ -122,6 +184,9 @@
   const counterEl = document.getElementById("counter");
   const prevBtn = document.getElementById("prev");
   const nextBtn = document.getElementById("next");
+  const themeBtn = document.getElementById("themeBtn");
+  const rotateBtn = document.getElementById("rotateBtn");
+  const appEl = document.getElementById("app");
 
   let index = 0;
 
@@ -166,6 +231,54 @@
     if (e.key === "ArrowLeft") show(index + 1);
     if (e.key === "ArrowRight") show(index - 1);
   });
+
+  // ===== الثيم ليلي / نهاري =====
+  function applyTheme(t) {
+    document.documentElement.setAttribute("data-theme", t);
+    themeBtn.textContent = t === "dark" ? "☀️ نهاري" : "🌙 ليلي";
+    try { localStorage.setItem("theme", t); } catch (e) {}
+  }
+  (function initTheme() {
+    let t = null;
+    try { t = localStorage.getItem("theme"); } catch (e) {}
+    if (!t) {
+      t = window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+    }
+    applyTheme(t);
+  })();
+  themeBtn.onclick = () => {
+    const cur = document.documentElement.getAttribute("data-theme");
+    applyTheme(cur === "dark" ? "light" : "dark");
+  };
+
+  // ===== تدوير الشاشة =====
+  // المحاولة الأولى: قفل اتجاه الشاشة الحقيقي (يحتاج ملء الشاشة، ويعمل في Chrome على أندرويد)
+  // إذا رفض المتصفح (مثل iPhone): تدوير الصفحة بالـ CSS
+  let fallbackOn = false;
+
+  rotateBtn.onclick = async () => {
+    if (fallbackOn) {
+      fallbackOn = false;
+      appEl.classList.remove("rot");
+      return;
+    }
+    const portrait = window.matchMedia("(orientation: portrait)").matches;
+    const target = portrait ? "landscape" : "portrait";
+    try {
+      if (!document.fullscreenElement) {
+        await document.documentElement.requestFullscreen();
+      }
+      await screen.orientation.lock(target);
+    } catch (e) {
+      if (document.fullscreenElement) {
+        try { await document.exitFullscreen(); } catch (_) {}
+      }
+      if (portrait) {
+        fallbackOn = true;
+        appEl.classList.add("rot");
+      }
+    }
+  };
 
   const start = parseInt(location.hash.slice(1), 10);
   show(isNaN(start) ? 0 : start - 1);
