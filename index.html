@@ -42,7 +42,6 @@
     text-align: center;
     box-shadow: 0 10px 30px rgba(0,0,0,.12);
   }
-  /* الصورة بحجمها الأصلي ونسبتها بدون قص */
   .photo {
     display: block;
     width: 100%;
@@ -99,11 +98,15 @@
 
 <script>
   // أضف أو عدّل الأشخاص هنا. كل سطر { } = صفحة جديدة.
+  // photo: بدون امتداد (images/1) = يجرب jpg و png تلقائيًا
+  //        أو مع امتداد (images/1.png) = يستخدمه كما هو
   const people = [
-    { name: "محمد",  phone: "33008860", photo: "images/1.jpg", note: "" },
-    { name: "الاسم الثاني", phone: "00000000", photo: "images/2.jpg", note: "" },
-    { name: "الاسم الثالث", phone: "00000000", photo: "images/3.jpg", note: "" }
+    { name: "محمد",  phone: "33008860", photo: "images/1", note: "" },
+    { name: "الاسم الثاني", phone: "00000000", photo: "images/2", note: "" },
+    { name: "الاسم الثالث", phone: "00000000", photo: "images/3.png", note: "" }
   ];
+
+  const EXTENSIONS = [".jpg", ".png", ".jpeg", ".webp"];
 
   const PLACEHOLDER = "data:image/svg+xml;utf8," + encodeURIComponent(
     '<svg xmlns="http://www.w3.org/2000/svg" width="1000" height="285">' +
@@ -122,12 +125,27 @@
 
   let index = 0;
 
+  function loadPhoto(path) {
+    const hasExt = /\.(jpe?g|png|webp|gif)$/i.test(path);
+    const candidates = hasExt ? [path] : EXTENSIONS.map(ext => path + ext);
+    let n = 0;
+    photoEl.onerror = () => {
+      n++;
+      if (n < candidates.length) {
+        photoEl.src = candidates[n];
+      } else {
+        photoEl.onerror = null;
+        photoEl.src = PLACEHOLDER;
+      }
+    };
+    photoEl.src = candidates[0];
+  }
+
   function show(i) {
     index = Math.max(0, Math.min(people.length - 1, i));
     const p = people[index];
 
-    photoEl.onerror = () => { photoEl.onerror = null; photoEl.src = PLACEHOLDER; };
-    photoEl.src = p.photo;
+    loadPhoto(p.photo);
     photoEl.alt = p.name;
     nameEl.textContent = p.name;
     phoneEl.textContent = p.phone;
