@@ -69,7 +69,7 @@
     width: auto;
     max-width: 100%;
   }
-  .tools { display: flex; gap: 10px; }
+  .tools { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
   .tools button {
     padding: 9px 16px;
     font-size: 15px;
@@ -137,6 +137,7 @@
       <img class="logo" src="logo.png" alt="Ramez">
     </div>
     <div class="tools">
+      <button id="homeBtn">🏠 الرئيسية</button>
       <button id="themeBtn">🌙 ليلي</button>
       <button id="rotateBtn">🔄 تدوير الشاشة</button>
     </div>
@@ -184,6 +185,7 @@
   const counterEl = document.getElementById("counter");
   const prevBtn = document.getElementById("prev");
   const nextBtn = document.getElementById("next");
+  const homeBtn = document.getElementById("homeBtn");
   const themeBtn = document.getElementById("themeBtn");
   const rotateBtn = document.getElementById("rotateBtn");
   const appEl = document.getElementById("app");
@@ -226,10 +228,12 @@
 
   prevBtn.onclick = () => show(index - 1);
   nextBtn.onclick = () => show(index + 1);
+  homeBtn.onclick = () => show(0);
 
   document.addEventListener("keydown", (e) => {
     if (e.key === "ArrowLeft") show(index + 1);
     if (e.key === "ArrowRight") show(index - 1);
+    if (e.key === "Home") show(0);
   });
 
   // ===== الثيم ليلي / نهاري =====
@@ -252,33 +256,74 @@
   };
 
   // ===== تدوير الشاشة =====
-  // المحاولة الأولى: قفل اتجاه الشاشة الحقيقي (يحتاج ملء الشاشة، ويعمل في Chrome على أندرويد)
-  // إذا رفض المتصفح (مثل iPhone): تدوير الصفحة بالـ CSS
-  let fallbackOn = false;
+  // الزر يحفظ حالته بنفسه: عادي <-> مدوَّر
+  let rotated = false;          // هل نحن في وضع التدوير الآن؟
+  let usedCssFallback = false;  // هل استخدمنا التدوير بالـ CSS؟
+  let originalOrientation = "portrait";
 
-  rotateBtn.onclick = async () => {
-    if (fallbackOn) {
-      fallbackOn = false;
-      appEl.classList.remove("rot");
-      return;
-    }
-    const portrait = window.matchMedia("(orientation: portrait)").matches;
-    const target = portrait ? "landscape" : "portrait";
+  async function enterRotated() {
+    originalOrientation = window.matchMedia("(orientation: portrait)").matches ? "portrait" : "landscape";
+    const target = originalOrientation === "portrait" ? "landscape" : "portrait";
+    rotated = true;
+    usedCssFallback = false;
     try {
       if (!document.fullscreenElement) {
         await document.documentElement.requestFullscreen();
       }
       await screen.orientation.lock(target);
     } catch (e) {
+      // المتصفح رفض القفل (مثل iPhone): ندوّر الصفحة بالـ CSS
       if (document.fullscreenElement) {
         try { await document.exitFullscreen(); } catch (_) {}
       }
-      if (portrait) {
-        fallbackOn = true;
+      if (originalOrientation === "portrait") {
+        usedCssFallback = true;
         appEl.classList.add("rot");
+      } else {
+        rotated = false;
       }
     }
+    updateRotateBtn();
+  }
+
+  async function exitRotated() {
+    rotated = false;
+    appEl.classList.remove("rot");
+    try {
+      if (screen.orientation && screen.orientation.lock && !usedCssFallback) {
+        // نرجع للاتجاه الأصلي ثم نحرر القفل
+        await screen.orientation.lock(originalOrientation);
+        setTimeout(() => {
+          try { screen.orientation.unlock(); } catch (_) {}
+        }, 400);
+      }
+    } catch (e) {
+      try { screen.orientation.unlock(); } catch (_) {}
+    }
+    usedCssFallback = false;
+    if (document.fullscreenElement) {
+      try { await document.exitFullscreen(); } catch (_) {}
+    }
+    updateRotateBtn();
+  }
+
+  function updateRotateBtn() {
+    rotateBtn.textContent = rotated ? "↩️ إرجاع الشاشة" : "🔄 تدوير الشاشة";
+  }
+
+  rotateBtn.onclick = () => {
+    if (rotated) exitRotated();
+    else enterRotated();
   };
+
+  // إذا خرج المستخدم من ملء الشاشة بنفسه (زر الرجوع) نصفّر الحالة
+  document.addEventListener("fullscreenchange", () => {
+    if (!document.fullscreenElement && rotated && !usedCssFallback) {
+      rotated = false;
+      try { screen.orientation.unlock(); } catch (_) {}
+      updateRotateBtn();
+    }
+  });
 
   const start = parseInt(location.hash.slice(1), 10);
   show(isNaN(start) ? 0 : start - 1);
